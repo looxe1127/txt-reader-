@@ -67,21 +67,17 @@
         .tag{padding:6px 12px;border-radius:16px;font-size:12px;font-weight:600;background:var(--tag-bg);color:var(--tag-text);border:2px solid transparent;cursor:pointer;transition:all .2s;}
         .tag.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
         .tag:active{transform:scale(.95);}
-
-        /* 藏書數量 - 簡潔一行 */
         .book-count-bar{
             background:var(--surface);border:2px solid var(--border);
             border-radius:12px;padding:10px 16px;margin:10px 0;
             text-align:center;font-size:15px;font-weight:700;
         }
         .book-count-bar .count{font-size:20px;}
-
         .book-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
         .book-grid .book-card{padding:14px;gap:8px;}
         .book-grid .book-title{font-size:15px;}
         .book-grid .book-meta{font-size:11px;gap:6px;}
         .book-grid .book-cat{font-size:10px;padding:2px 8px;}
-
         .book-list-mode{display:flex;flex-direction:column;gap:4px;}
         .book-list-mode .book-row{
             display:flex;justify-content:space-between;align-items:center;
@@ -91,7 +87,6 @@
         .book-list-mode .book-row:active{background:var(--hover);}
         .book-list-mode .book-row .title{font-size:16px;font-weight:600;}
         .book-list-mode .book-row .meta{font-size:12px;color:var(--text2);}
-
         .book-card{
             background:var(--surface);border:2px solid var(--border);
             border-radius:16px;padding:18px;cursor:pointer;
@@ -104,7 +99,6 @@
         .book-tags{display:flex;gap:4px;flex-wrap:wrap;}
         .pbar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
         .pfill{height:100%;background:var(--accent);border-radius:3px;transition:width .3s;}
-
         .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;padding:20px;}
         .modal-overlay.active{display:flex;}
         .modal-box{background:var(--surface);border-radius:20px;padding:24px;width:100%;max-width:500px;display:flex;flex-direction:column;gap:16px;max-height:90vh;overflow-y:auto;}
@@ -116,12 +110,9 @@
         .dup-warning{background:#fff3cd;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:600;color:#856404;display:none;}
         [data-theme="dark"] .dup-warning{background:#3d3200;color:#ffc107;}
         .dup-warning.show{display:block;}
-
         .cat-list-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
         .cat-list-item .name{font-weight:600;}
         .cat-list-item .actions{display:flex;gap:8px;}
-
-        /* 閱讀器 - 頂部一行過 */
         .reader-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:100;flex-direction:column;}
         .reader-overlay.active{display:flex;}
         .reader-top{
@@ -154,7 +145,6 @@
         .hidden{display:none!important;}
         .file-input{display:none;}
         .empty-state{text-align:center;padding:30px;color:var(--text2);grid-column:1/-1;}
-
         .view-toggle{display:flex;gap:4px;background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:3px;}
         .view-toggle .vt-btn{padding:6px 10px;border-radius:8px;border:none;background:transparent;color:var(--text);font-size:14px;cursor:pointer;font-family:inherit;}
         .view-toggle .vt-btn.active{background:var(--accent);color:var(--bg);}
@@ -192,7 +182,6 @@
             <button class="btn btn-xs" onclick="showCatManager()" style="margin-left:auto;">⚙️ 管理分類</button>
         </div>
 
-        <!-- 藏書數量 - 簡潔一行 -->
         <div class="book-count-bar">📖 藏書數量：<span class="count" id="statBooks">0</span> 本</div>
 
         <div id="bookContainer"><div class="empty-state">📭 尚未加入書籍</div></div>
@@ -232,7 +221,6 @@
             <button class="btn btn-xs encoding-fix-btn" data-enc="big5">🇭🇰 Big5</button>
             <button class="btn btn-xs encoding-fix-btn" data-enc="utf8">🌐 UTF-8</button>
         </div>
-        <!-- 閱讀器頂部 - 一行過 -->
         <div class="reader-top">
             <button class="btn btn-sm" onclick="closeReader()">←</button>
             <button class="btn btn-sm" onclick="changeFS(-1)">A-</button>
@@ -267,7 +255,7 @@
 
     <script>
         const DB = 'BookshelfDB';
-        const DB_VERSION = 3;
+        const DB_VERSION = 4;
         let db, currentBook = null, readTimer = null, readStart = null, currentRaw = null;
         let currentCat = 'all';
         let allCategories = [];
@@ -288,9 +276,8 @@
                         if (!d.objectStoreNames.contains('rawFiles')) d.createObjectStore('rawFiles', { keyPath: 'id' });
                         if (!d.objectStoreNames.contains('categories')) d.createObjectStore('categories', { keyPath: 'name' });
                     }
-                    if (e.oldVersion < 3) {
-                        // 確保 books store 存在（如果之前冇嘅話）
-                        if (!d.objectStoreNames.contains('books')) d.createObjectStore('books', { keyPath: 'id' });
+                    if (e.oldVersion < 4) {
+                        if (!d.objectStoreNames.contains('readerState')) d.createObjectStore('readerState', { keyPath: 'key' });
                     }
                 };
             });
@@ -316,6 +303,9 @@
         const saveCat = n => dbOp('categories', 'readwrite', s => s.put({ name: n }));
         const deleteCat = n => dbOp('categories', 'readwrite', s => s.delete(n));
         const getAllCats = () => dbOp('categories', 'readonly', s => s.getAll()).then(r => r.map(x => x.name));
+        const saveReaderState = (k, v) => dbOp('readerState', 'readwrite', s => s.put({ key: k, value: v }));
+        const getReaderState = k => dbOp('readerState', 'readonly', s => s.get(k)).then(r => r?.value);
+        const deleteReaderState = k => dbOp('readerState', 'readwrite', s => s.delete(k));
 
         function tryDecode(buffer, enc) {
             const map = { auto: ['utf-8', 'gbk', 'gb18030', 'big5', 'big5-hkscs'], utf8: ['utf-8'], gbk: ['gbk', 'gb18030'], gb18030: ['gb18030', 'gbk'], big5: ['big5', 'big5-hkscs'], 'big5-hkscs': ['big5-hkscs', 'big5'] };
@@ -546,7 +536,6 @@
 
         async function refreshBooks() {
             const books = await getAllBooks();
-            // 新書排最前（按 addedDate 倒序）
             books.sort((a, b) => new Date(b.addedDate) - new Date(a.addedDate));
             const q = (document.getElementById('lobbySearch').value || '').toLowerCase();
             let filtered = books;
@@ -590,23 +579,69 @@
             }
         }
 
+        // ============ 閱讀器核心（修復版）============
+        
+        // 精準跳轉 - 將字符位置轉換為實際像素位置
+        function charPosToScrollPos(charIndex, text) {
+            // 用 invisible marker 方法：喺目標字符前插入 marker，讀取佢嘅 offsetTop
+            const el = document.getElementById('readerContent');
+            const currentText = el.textContent || text;
+            
+            if (charIndex <= 0) return 0;
+            if (charIndex >= currentText.length) return el.scrollHeight;
+            
+            // 創建一個臨時嘅完整內容，喺目標位置插入 marker
+            const before = escForMarker(currentText.substring(0, charIndex));
+            const after = escForMarker(currentText.substring(charIndex));
+            const marker = '<span id="_jumpMarker" style="display:inline;">&nbsp;</span>';
+            
+            el.innerHTML = before + marker + after;
+            el.style.fontSize = (currentBook?.fontSize || 20) + 'px';
+            
+            const markerEl = document.getElementById('_jumpMarker');
+            const targetScroll = markerEl ? markerEl.offsetTop - 60 : 0;
+            
+            // 恢復純文字
+            el.textContent = currentText;
+            
+            return targetScroll;
+        }
+
+        function escForMarker(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
         async function openBook(id) {
             const b = await getBook(id); if (!b) return;
             currentBook = b;
+            
+            // 儲存閱讀器狀態（邊本書）
+            await saveReaderState('currentBookId', id);
+            
             document.getElementById('mainPage').classList.add('hidden');
             document.getElementById('readerOverlay').classList.add('active');
             document.getElementById('fixBar').classList.add('hidden');
+            
             updateContent(b.content, b.fontSize || 20);
+            
+            // 恢復進度 - 使用精準跳轉
             if (b.progress > 0 && b.content) {
                 const el = document.getElementById('readerContent');
-                setTimeout(() => { el.scrollTop = el.scrollHeight * (b.progress / b.content.length); }, 100);
+                setTimeout(() => {
+                    const scrollTarget = charPosToScrollPos(b.progress, b.content);
+                    el.scrollTop = scrollTarget;
+                }, 150);
             }
+            
             document.getElementById('searchArea').classList.add('hidden');
             document.getElementById('searchResults').innerHTML = '';
             document.getElementById('tocSidebar').classList.remove('active');
             document.getElementById('tocBackdrop').classList.remove('active');
+            
             const raw = await getRaw(b.id); currentRaw = raw?.buffer || null;
-            readStart = Date.now(); if (readTimer) clearInterval(readTimer); readTimer = setInterval(saveProgress, 5000);
+            readStart = Date.now();
+            if (readTimer) clearInterval(readTimer);
+            readTimer = setInterval(saveProgress, 3000); // 每3秒儲存一次
             updateTOC(b);
         }
 
@@ -617,24 +652,45 @@
             document.getElementById('fsLabel').textContent = fs || 20;
         }
 
-        function closeReader() {
-            if (readTimer) clearInterval(readTimer); saveProgress();
+        async function closeReader() {
+            if (readTimer) clearInterval(readTimer);
+            await saveProgress();
+            await deleteReaderState('currentBookId');
+            
             document.getElementById('readerOverlay').classList.remove('active');
             document.getElementById('mainPage').classList.remove('hidden');
             document.getElementById('tocSidebar').classList.remove('active');
             document.getElementById('tocBackdrop').classList.remove('active');
             document.getElementById('fixBar').classList.add('hidden');
-            currentBook = null; currentRaw = null; refreshBooks();
+            currentBook = null;
+            currentRaw = null;
+            refreshBooks();
         }
 
         async function saveProgress() {
             if (!currentBook || !readStart) return;
-            const b = await getBook(currentBook.id); if (!b) return;
+            const b = await getBook(currentBook.id);
+            if (!b) return;
+            
             const el = document.getElementById('readerContent');
-            if (el && b.content) b.progress = Math.floor((el.scrollTop / el.scrollHeight) * b.content.length);
+            if (el && b.content) {
+                // 用 scrollTop 比例 x 總字數 = 大約位置
+                const ratio = el.scrollHeight > 0 ? el.scrollTop / el.scrollHeight : 0;
+                b.progress = Math.floor(ratio * b.content.length);
+            }
+            
             const elapsed = Math.floor((Date.now() - readStart) / 60000);
-            if (elapsed > 0) { b.readTime = (b.readTime || 0) + elapsed; const today = new Date().toDateString(); const last = b.lastReadDate ? new Date(b.lastReadDate).toDateString() : null; b.todayReadTime = (last === today ? (b.todayReadTime || 0) : 0) + elapsed; b.lastReadDate = new Date().toISOString(); readStart = Date.now(); }
-            await saveBook(b); currentBook = b;
+            if (elapsed > 0) {
+                b.readTime = (b.readTime || 0) + elapsed;
+                const today = new Date().toDateString();
+                const last = b.lastReadDate ? new Date(b.lastReadDate).toDateString() : null;
+                b.todayReadTime = (last === today ? (b.todayReadTime || 0) : 0) + elapsed;
+                b.lastReadDate = new Date().toISOString();
+                readStart = Date.now();
+            }
+            
+            await saveBook(b);
+            currentBook = b;
         }
 
         function changeFS(delta) {
@@ -643,14 +699,12 @@
             if (newSize === currentBook.fontSize) return;
             
             const el = document.getElementById('readerContent');
-            // 記住而家嘅捲動比例
             const scrollRatio = el.scrollHeight > 0 ? el.scrollTop / el.scrollHeight : 0;
             
             currentBook.fontSize = newSize;
             el.style.fontSize = newSize + 'px';
             document.getElementById('fsLabel').textContent = newSize;
             
-            // 恢復捲動位置
             requestAnimationFrame(() => {
                 el.scrollTop = el.scrollHeight * scrollRatio;
             });
@@ -658,47 +712,87 @@
             saveBook(currentBook);
         }
 
-        function toggleFixBar() { const bar = document.getElementById('fixBar'); bar.classList.toggle('hidden'); if (!bar.classList.contains('hidden')) toast('🔧 揀一個編碼重新解碼'); }
+        function toggleFixBar() {
+            const bar = document.getElementById('fixBar');
+            bar.classList.toggle('hidden');
+            if (!bar.classList.contains('hidden')) toast('🔧 揀一個編碼重新解碼');
+        }
 
         async function reDecode(enc) {
             if (!currentBook || !currentRaw) { toast('❌ 只支援上傳嘅TXT檔案'); return; }
             document.querySelectorAll('.encoding-fix-btn').forEach(b => b.classList.remove('active'));
-            const ab = document.querySelector('.encoding-fix-btn[data-enc="' + enc + '"]'); if (ab) ab.classList.add('active');
+            const ab = document.querySelector('.encoding-fix-btn[data-enc="' + enc + '"]');
+            if (ab) ab.classList.add('active');
             const newText = tryDecode(currentRaw, enc);
             const el = document.getElementById('readerContent');
             const scrollRatio = el.scrollHeight > 0 ? el.scrollTop / el.scrollHeight : 0;
             updateContent(newText, currentBook.fontSize || 20);
-            currentBook.content = newText; currentBook.encoding = enc; await saveBook(currentBook);
+            currentBook.content = newText;
+            currentBook.encoding = enc;
+            await saveBook(currentBook);
             updateTOC(currentBook);
             requestAnimationFrame(() => { el.scrollTop = el.scrollHeight * scrollRatio; });
             toast('✅ 已用 ' + enc.toUpperCase() + ' 重新解碼！');
         }
 
-        document.addEventListener('click', e => { if (e.target.classList.contains('encoding-fix-btn')) reDecode(e.target.dataset.enc); });
+        document.addEventListener('click', e => {
+            if (e.target.classList.contains('encoding-fix-btn')) reDecode(e.target.dataset.enc);
+        });
 
-        function toggleSearch() { document.getElementById('searchArea').classList.toggle('hidden'); if (!document.getElementById('searchArea').classList.contains('hidden')) document.getElementById('searchInput').focus(); }
+        function toggleSearch() {
+            document.getElementById('searchArea').classList.toggle('hidden');
+            if (!document.getElementById('searchArea').classList.contains('hidden')) {
+                document.getElementById('searchInput').focus();
+            }
+        }
 
         function doSearch() {
             if (!currentBook) return;
-            const q = document.getElementById('searchInput').value.toLowerCase(), rd = document.getElementById('searchResults');
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const rd = document.getElementById('searchResults');
             if (!q) { rd.innerHTML = ''; return; }
-            const c = currentBook.content.toLowerCase(), res = [];
-            let pos = c.indexOf(q), cnt = 0;
-            while (pos !== -1 && cnt < 20) { const s = Math.max(0, pos - 25), e = Math.min(c.length, pos + q.length + 25); const ex = (s > 0 ? '...' : '') + currentBook.content.substring(s, e).replace(/\n/g, ' ') + (e < c.length ? '...' : ''); const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'); res.push({ pos: pos, excerpt: ex.replace(re, m => '<b style="background:#ffc107;color:#000;">' + m + '</b>') }); pos = c.indexOf(q, pos + 1); cnt++; }
-            rd.innerHTML = res.length ? res.map(r => '<div class="search-result" onclick="jumpTo(' + r.pos + ')">📍 ' + r.excerpt + '</div>').join('') : '<div style="padding:14px;color:var(--text2);">找不到結果</div>';
+            
+            const content = currentBook.content;
+            const lowerContent = content.toLowerCase();
+            const results = [];
+            let pos = lowerContent.indexOf(q);
+            let cnt = 0;
+            
+            while (pos !== -1 && cnt < 20) {
+                const s = Math.max(0, pos - 25);
+                const e = Math.min(lowerContent.length, pos + q.length + 25);
+                const excerpt = (s > 0 ? '...' : '') +
+                    content.substring(s, e).replace(/\n/g, ' ') +
+                    (e < content.length ? '...' : '');
+                const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                const highlightExcerpt = excerpt.replace(re, m => '<b style="background:#ffc107;color:#000;">' + m + '</b>');
+                
+                results.push({ pos, excerpt: highlightExcerpt });
+                pos = lowerContent.indexOf(q, pos + 1);
+                cnt++;
+            }
+            
+            rd.innerHTML = results.length
+                ? results.map(r => '<div class="search-result" onclick="jumpTo(' + r.pos + ')">📍 ' + r.excerpt + '</div>').join('')
+                : '<div style="padding:14px;color:var(--text2);">找不到結果</div>';
         }
 
-        function jumpTo(pos) {
+        function jumpTo(charIndex) {
             if (!currentBook) return;
-            document.getElementById('readerContent').scrollTop = (pos / currentBook.content.length) * document.getElementById('readerContent').scrollHeight;
-            document.getElementById('searchArea').classList.add('hidden'); toast('📍 已跳轉');
+            const scrollTarget = charPosToScrollPos(charIndex, currentBook.content);
+            const el = document.getElementById('readerContent');
+            el.scrollTop = scrollTarget;
+            document.getElementById('searchArea').classList.add('hidden');
+            toast('📍 已跳轉');
         }
 
-        function toggleTOC() { document.getElementById('tocSidebar').classList.toggle('active'); document.getElementById('tocBackdrop').classList.toggle('active'); }
+        function toggleTOC() {
+            document.getElementById('tocSidebar').classList.toggle('active');
+            document.getElementById('tocBackdrop').classList.toggle('active');
+        }
 
         function updateTOC(b) {
             const tl = document.getElementById('tocList');
-            // 章節檢測 - 支援中文 + Chapter/Ch
             const patterns = [
                 /第[一二三四五六七八九十百千\d]+[章节回]/g,
                 /第[一二三四五六七八九十百千\d]+[章節回]/g,
@@ -707,27 +801,42 @@
                 /^\d+[\.、\s]+.+/gm
             ];
             let ch = [];
-            for (const p of patterns) { const m = b.content.match(p); if (m) ch = ch.concat(m); }
+            for (const p of patterns) {
+                const m = b.content.match(p);
+                if (m) ch = ch.concat(m);
+            }
             ch = [...new Set(ch)];
-            if (!ch.length) { tl.innerHTML = '<div style="color:var(--text2);">📭 未偵測到章節</div>'; return; }
-            tl.innerHTML = ch.slice(0, 100).map(c => { const i = b.content.indexOf(c); return '<div class="toc-item" onclick="jumpTo(' + i + ');toggleTOC();">' + esc(c) + '</div>'; }).join('');
+            if (!ch.length) {
+                tl.innerHTML = '<div style="color:var(--text2);">📭 未偵測到章節</div>';
+                return;
+            }
+            tl.innerHTML = ch.slice(0, 100).map(c => {
+                const i = b.content.indexOf(c);
+                return '<div class="toc-item" onclick="jumpTo(' + i + ');toggleTOC();">' + esc(c) + '</div>';
+            }).join('');
         }
 
         async function toggleTheme() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             document.documentElement.setAttribute('data-theme', isDark ? '' : 'dark');
-            await saveSet('theme', isDark ? 'light' : 'dark'); toast(isDark ? '☀️ 日間模式' : '🌙 夜間模式');
+            await saveSet('theme', isDark ? 'light' : 'dark');
+            toast(isDark ? '☀️ 日間模式' : '🌙 夜間模式');
         }
 
         async function exportAll() {
             const books = await getAllBooks();
-            const blob = new Blob([JSON.stringify({ books: books, exportDate: new Date().toISOString(), version: 3 }, null, 2)], { type: 'application/json' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'bookshelf-' + new Date().toISOString().split('T')[0] + '.json'; a.click();
+            const blob = new Blob([JSON.stringify({ books, exportDate: new Date().toISOString(), version: 4 }, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'bookshelf-' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
             toast('💾 備份已下載');
         }
 
         function importAll() {
-            const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json';
+            const inp = document.createElement('input');
+            inp.type = 'file';
+            inp.accept = '.json';
             inp.onchange = async e => {
                 try {
                     const t = await e.target.files[0].text(), data = JSON.parse(t);
@@ -741,22 +850,43 @@
                         await store.put(b);
                     }
                     await new Promise(r => { tx.oncomplete = r; });
-                    toast('✅ 匯入完成！'); refreshBooks(); loadCategories();
+                    toast('✅ 匯入完成！');
+                    refreshBooks();
+                    loadCategories();
                 } catch (x) { console.error(x); toast('❌ 匯入失敗'); }
-            }; inp.click();
+            };
+            inp.click();
         }
 
         function toast(msg) {
             document.querySelectorAll('.toast').forEach(t => t.remove());
-            const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
-            document.body.appendChild(t); setTimeout(() => t.remove(), 1800);
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 1800);
         }
 
-        document.addEventListener('keydown', e => { if (e.key === 'Escape' && currentBook) closeReader(); });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && currentBook) closeReader();
+        });
+
+        // 頁面恢復：如果之前有打開嘅書，自動恢復
+        async function restoreReaderState() {
+            const savedBookId = await getReaderState('currentBookId');
+            if (savedBookId) {
+                const book = await getBook(savedBookId);
+                if (book) {
+                    await openBook(savedBookId);
+                } else {
+                    await deleteReaderState('currentBookId');
+                }
+            }
+        }
 
         (async function () {
             await openDB();
-            // 遷移：確保舊書有 fontSize
+            // 遷移
             const books = await getAllBooks();
             for (const b of books) {
                 let changed = false;
@@ -772,6 +902,9 @@
             if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
             await loadCategories();
             refreshBooks();
+            
+            // 恢復上次嘅閱讀狀態
+            await restoreReaderState();
         })();
     </script>
 </body>
